@@ -26,36 +26,5 @@ class MainController:
             return 400
         return 200
 
-#def init():
-    #pobieranie configa
-#    global RoomsData
-#    RoomsData = conf.getRooms()
-#    #tworzenie kontrolera led
-#    global ledController
-#    ledController = LedController(RoomsData)
-#    #tworzenie listenera
-#    comm = CommunicationModule(getRoomsData, setRoomState)
-#    comm.run()
-	
-#def getRoomsData():
-#    return RoomsData
-	
-	
-#def setRoomState(room):
-#    room = Room(room)
-#    #sprawdzenie czy istnieje taki pokoj
-#    if room.name not in RoomsData:
-#        return 400 #ktos kombinuje z nazwami pokoi - nie ma co zwracac
-#    try:
-#       room.R.pin = RoomsData[room.name].R.pin
-#       room.G.pin = RoomsData[room.name].G.pin
-#       room.B.pin = RoomsData[room.name].B.pin
-#       ledController.setRoom(room)
-#   except NameError: #ktos kombinuje z nazwami pokoi - nie ma co zwracac; nie powinno sie wykonac
-#       return 400 
-#   except NotImplementedError: #nie udalo sie zmienic - zwraca to co jest
-#       return 400
-#   return 200
-
 if __name__ == '__main__':
     app = MainController()

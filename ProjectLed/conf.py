@@ -1,6 +1,6 @@
 import json
 from RoomClass import Room
-config_file = '../config.json'
+config_file = '/home/pi/ProjectLed/config.json'
 
 def get_rooms():
     data = json.load(open(config_file))

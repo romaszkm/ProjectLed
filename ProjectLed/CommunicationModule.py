@@ -33,14 +33,22 @@ class RestModule(threading.Thread):
 
         @app.route('/rooms/set', methods=['POST'])
         def set():
-            code = self.father_controller.set(request.data)
+            data = request.data
+            if not data:
+                data = request.form.keys()[0]
+            code = self.father_controller.set(data)
             return 'Operation result {}'.format(code), code 
             
         @app.route('/rooms/get')
         def get():
-            rooms = self.father_controller.get()
-            response = '{"rooms":'
+            response = toJson(self.father_controller.get())
+            return response, 200
+
+        def toJson(rooms):
+            array = []
             for room in rooms:
-                response += '[{}],'.format(rooms[room].toJSON())
-            return response[:-1] + "}"
+                array.append(rooms[room].to_dict())
+            return json.dumps({'rooms':array})
+
+
         app.run(port=2525, host='0.0.0.0', debug=False, use_reloader=False)
