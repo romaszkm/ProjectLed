@@ -1,17 +1,20 @@
 import json
 class Channel:
-    def __init__(self, pin):
-	self.value = pin
-        self.pin = pin
+    def __init__(self, var, is_value):
+        if is_value:
+	    self.value = var
+        else:
+            self.value = 0
+            self.pin = var
 
 class Room:
-    def __init__(self, room):
+    def __init__(self, room, is_value):
         if isinstance(room, basestring):
             room = json.loads(room)
 	self.name = room['name']
-	self.R = Channel(room['R'])
-	self.G = Channel(room['G'])
-	self.B = Channel(room['B'])
+	self.R = Channel(room['R'], is_value)
+	self.G = Channel(room['G'], is_value)
+	self.B = Channel(room['B'], is_value)
         if 'effect' in room:
             self.effect = room['effect']
         else:

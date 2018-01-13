@@ -10,11 +10,10 @@ class LedController:
 	
     def set(self, room):
         name = room.name
-        #teoretycznie nadmiarowe sprawdzenie
         if name in self.rooms:
 	    if self.rooms[name] is not None:
 	        if self.rooms[name].is_active:
-		    #zatrzymanie istniejacego watku efektu
+		    #stopping existing effect thread
 		    self.rooms[name].stop()
 	    self.rooms[name] = self._effect_daemon(deepcopy(room))
             self.rooms[name].start()
@@ -23,7 +22,7 @@ class LedController:
 			
 			
     def _effect_daemon(self, room):
-        #tworzenie odpowiedniego daemona zgodnie z room.effect
+        #creating effect based on effect parameter
         if room.effect == 'constant' or room.effect is None:
 	    return ConstantEffect(room)
 	elif room.effect == 'breathing':

@@ -7,7 +7,7 @@ def get_rooms():
     data = json.load(open(config_file))
     rooms = {}
     for room_data in data['rooms']:
-	rooms[room_data['name']] = (Room(room_data))
+	rooms[room_data['name']] = (Room(room_data, False))
     return rooms
 
 def get_effect_config(name):

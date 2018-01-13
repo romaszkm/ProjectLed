@@ -11,7 +11,7 @@ class MainController:
         self.comm_module.run()
 
     def set_room(self, room):
-        room = Room(room)
+        room = Room(room, True)
         name = room.name
         if room.name not in self.rooms:
             return 400
