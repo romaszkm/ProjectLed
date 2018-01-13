@@ -1,13 +1,17 @@
 import json
 import threading
+import uuid
 from RoomClass import Room
 from flask import Flask, request
+from bluetooth import *
 
 class CommunicationModule:
     def __init__(self, main_controller):
         self.main_controller = main_controller
         self.rest_module = RestModule(self)
-	self.bt_module = None
+	self.bt_module = BTModule(self)
+        self.rest_module = None
+	#self.bt_module = None
     
     def run(self):
         if self.rest_module is not None:
@@ -50,5 +54,36 @@ class RestModule(threading.Thread):
                 array.append(rooms[room].to_dict())
             return json.dumps({'rooms':array})
 
-
         app.run(port=2525, host='0.0.0.0', debug=False, use_reloader=False)
+
+class BTModule(threading.Thread):
+    def __init__(self, father_controller):
+        threading.Thread.__init__(self)
+        self.father_controller = father_controller
+
+    def run(self):
+        server_sock = BluetoothSocket(RFCOMM)
+        server_sock.bind(("", PORT_ANY))
+        server_sock.listen(1)
+        port = server_sock.getsockname()[1]
+
+        id = str(uuid.uuid1())
+        advertise_service(server_sock, 'LedControlServer',
+                service_id = id,
+                service_classes = [id, SERIAL_PORT_CLASS],
+                profiles = [SERIAL_PORT_PROFILE]
+                )
+        while True:
+            print('Waiting for connection')
+            client_sock, client_info = server_sock.accept()
+            print('Connection from ', client_info)
+            try:
+                while True:
+                    data = client_sock.recv(1024)
+                    if len(data) == 0:
+                        break
+                    print('received [%s]' % data)
+            except IOError:
+                pass
+            print('Disconnected')
+
