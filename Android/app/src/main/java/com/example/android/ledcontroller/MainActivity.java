@@ -1,7 +1,6 @@
 package com.example.android.ledcontroller;
 
 import android.content.Intent;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -23,15 +22,15 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        if (getIntent().hasExtra("JSON")) {
-            getJsonData();
-            mode = REST_MODE;
-        } else {
-            mode = BT_MODE;
-            //BT Data
-        }
+        getJsonData();
         setButtons();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (mode == BT_MODE)
+            BTConnectActivity.closeSocket();
+        super.onBackPressed();
     }
 
     private void setButtons() {
