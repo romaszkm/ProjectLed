@@ -23,14 +23,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        if (getIntent().hasExtra("JSON")) {
+//        if (mode == REST_MODE)
             getJsonData();
-            mode = REST_MODE;
-        } else {
-            mode = BT_MODE;
-            //BT Data
-        }
         setButtons();
     }
 

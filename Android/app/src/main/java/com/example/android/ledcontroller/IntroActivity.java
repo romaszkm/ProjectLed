@@ -1,5 +1,7 @@
 package com.example.android.ledcontroller;
 
+import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -14,8 +16,13 @@ public class IntroActivity extends AppCompatActivity {
     }
 
     public void actionRest(View v) {
-        //przejscie do drugiej aktywnosci
         Intent intent = new Intent(this, RestConnectActivity.class);
         startActivity(intent);
     }
+
+    public void actionBT(View v) {
+        Intent intent = new Intent(this, BTConnectActivity.class);
+        startActivity(intent);
+    }
+
 }

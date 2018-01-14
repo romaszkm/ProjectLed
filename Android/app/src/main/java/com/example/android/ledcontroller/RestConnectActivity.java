@@ -18,6 +18,7 @@ import android.widget.SpinnerAdapter;
 import android.widget.TextView;
 
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -26,6 +27,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -43,6 +45,12 @@ public class RestConnectActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_rest_connect);
+
+        setCachedAddresses();
+
+    }
+
+    private void setCachedAddresses() {
         cachedAddresses = getAddresses();
         if (cachedAddresses != null) {
             Spinner cachedAddressesSpinner = (Spinner) findViewById(R.id.spinnerCachedAddresses);
@@ -64,23 +72,10 @@ public class RestConnectActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         try {
-                            String endpoint = uri.charAt(uri.length() - 1) == '/' ? uri : uri + "/";
-                            endpoint += "rooms/get";
-                            URL address = new URL(endpoint);
-                            HttpURLConnection myConnection =
-                                    (HttpURLConnection) address.openConnection();
-                            if (myConnection.getResponseCode() == 200) {
-                                myConnection.disconnect();
+                            HttpURLConnection myConnection = createConnection(uri);
+                            if (myConnection != null) {
                                 saveAddress(uri);
-                                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(myConnection.getInputStream()));
-                                StringBuilder stringBuilder = new StringBuilder();
-                                String line;
-                                while ((line = bufferedReader.readLine()) != null) {
-                                    stringBuilder.append(line).append('\n');
-                                }
-                                startMainActivity(stringBuilder.toString(), uri);
-                            } else {
-                                myConnection.disconnect();
+                                startMainActivity(getJson(myConnection), uri);
                             }
                         } catch (Exception e) {
                             Log.e("REST", "Cant connect to address: " + uri);
@@ -89,12 +84,38 @@ public class RestConnectActivity extends AppCompatActivity {
                 });
             }
         } else {
-            //TODO informacja ze trzeba wypelnic
+            //TODO information to fill out uri
+        }
+    }
+
+    private String getJson(HttpURLConnection connection) throws Exception {
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+        StringBuilder stringBuilder = new StringBuilder();
+        String line;
+        while ((line = bufferedReader.readLine()) != null) {
+            stringBuilder.append(line).append('\n');
+        }
+        return stringBuilder.toString();
+    }
+
+    private HttpURLConnection createConnection(String uri) throws Exception {
+        String endpoint = uri.charAt(uri.length() - 1) == '/' ? uri : uri + "/";
+        endpoint += "rooms/get";
+        URL address = new URL(endpoint);
+        HttpURLConnection myConnection =
+                (HttpURLConnection) address.openConnection();
+        if (myConnection.getResponseCode() == 200) {
+            myConnection.disconnect();
+            return myConnection;
+        } else {
+            myConnection.disconnect();
+            return null;
         }
     }
 
     private void startMainActivity(String jsonString, String uri) {
         Intent intent = new Intent(this, MainActivity.class);
+        MainActivity.mode = MainActivity.REST_MODE;
         intent.putExtra("JSON", jsonString);
         intent.putExtra("URI", uri);
         startActivity(intent);
@@ -150,5 +171,37 @@ public class RestConnectActivity extends AppCompatActivity {
         public void onNothingSelected(AdapterView<?> parent) {
 
         }
+    }
+
+    public static void set(Room room, String uri) {
+        final String url = uri;
+        final Room Room = room;
+        AsyncTask.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (MainActivity.mode == MainActivity.REST_MODE) {
+                        String endpoint = url.charAt(url.length() - 1) == '/' ? url : url + "/";
+                        URL address = new URL(endpoint + "rooms/set");
+
+                        HttpURLConnection myConnection
+                                = (HttpURLConnection) address.openConnection();
+                        myConnection.setRequestMethod("POST");
+                        myConnection.setDoOutput(true);
+                        myConnection.setDoInput(true);
+                        DataOutputStream printout;
+                        printout = new DataOutputStream(myConnection.getOutputStream());
+                        printout.writeBytes(URLEncoder.encode(Room.toJson().toString(), "UTF-8"));
+                        printout.flush();
+                        printout.close();
+
+                        Log.e("NET", "" + myConnection.getResponseCode());
+                        Log.e("NET", myConnection.getResponseMessage());
+                    }
+                } catch (Exception e) {
+                    Log.e("REST", "Can't send request");
+                }
+            }
+        });
     }
 }

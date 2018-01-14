@@ -1,26 +1,20 @@
 package com.example.android.ledcontroller;
 
 import android.content.Intent;
-import android.os.AsyncTask;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.SeekBar;
-
-import java.io.DataOutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
-
-import javax.net.ssl.HttpsURLConnection;
 
 public class ColorActivity extends AppCompatActivity {
 
     private final static String EFFECT_SWIPE = "swipe";
     private final static String EFFECT_BREATHING = "breathing";
-    private final static String ENDPOINT_REST_SET = "rooms/set";
 
     private String effect;
     private SeekBar bar_R;
@@ -57,6 +51,36 @@ public class ColorActivity extends AppCompatActivity {
         bar_G.setProgress(g);
         bar_B.setProgress(b);
 
+        bar_R.getProgressDrawable().setColorFilter(new PorterDuffColorFilter(Color.RED, PorterDuff.Mode.MULTIPLY));
+        bar_G.getProgressDrawable().setColorFilter(new PorterDuffColorFilter(Color.GREEN, PorterDuff.Mode.MULTIPLY));
+        bar_B.getProgressDrawable().setColorFilter(new PorterDuffColorFilter(Color.BLUE, PorterDuff.Mode.MULTIPLY));
+
+        SeekBar.OnSeekBarChangeListener listener = new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                int r = bar_R.getProgress();
+                int g = bar_G.getProgress();
+                int b = bar_B.getProgress();
+
+                Button preview = (Button) findViewById(R.id.colorPreview);
+                preview.setBackgroundColor(Color.argb(255, r, g, b));
+            }
+        };
+
+        bar_R.setOnSeekBarChangeListener(listener);
+        bar_G.setOnSeekBarChangeListener(listener);
+        bar_B.setOnSeekBarChangeListener(listener);
+
         if (effect != null) {
             swipe.setSelected(effect.equals(EFFECT_SWIPE));
             swipe.setSelected(effect.equals(EFFECT_BREATHING));
@@ -65,34 +89,11 @@ public class ColorActivity extends AppCompatActivity {
 
     public void set(View v) {
         final Room room = new Room(getIntent().getStringExtra("name"), bar_R.getProgress(), bar_G.getProgress(), bar_B.getProgress(), effect);
-        AsyncTask.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    if (MainActivity.mode == MainActivity.REST_MODE) {
-                        String uri = getIntent().getStringExtra("URI");
-                        String endpoint = uri.charAt(uri.length() - 1) == '/' ? uri : uri + "/";
-                        URL address = new URL(endpoint + ENDPOINT_REST_SET);
-
-                        HttpURLConnection myConnection
-                                = (HttpURLConnection) address.openConnection();
-                        myConnection.setRequestMethod("POST");
-                        myConnection.setDoOutput(true);
-                        myConnection.setDoInput(true);
-                        DataOutputStream printout;
-                        printout = new DataOutputStream(myConnection.getOutputStream());
-                        printout.writeBytes(URLEncoder.encode(room.toJson().toString(), "UTF-8"));
-                        printout.flush();
-                        printout.close();
-
-                        Log.e("NET", "" + myConnection.getResponseCode());
-                        Log.e("NET", myConnection.getResponseMessage());
-                    }
-                } catch (Exception e) {
-                    Log.e("REST", "Can't send request");
-                }
-            }
-        });
+        if (MainActivity.mode == MainActivity.REST_MODE) {
+            RestConnectActivity.set(room, getIntent().getStringExtra("URI"));
+        } else {
+            BTConnectActivity.set(room);
+        }
     }
 
     public void actionSwipeCheckBox(View v) {
