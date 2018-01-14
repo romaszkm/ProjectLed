@@ -1,45 +1,40 @@
 package com.example.android.ledcontroller;
 
-import android.app.Activity;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.AsyncTask;
-import android.provider.Settings;
-import android.support.v7.app.AppCompatActivity;
+import android.os.Build;
 import android.os.Bundle;
-import android.util.JsonReader;
+import android.support.v7.app.AlertDialog;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.ListAdapter;
 import android.widget.Spinner;
-import android.widget.SpinnerAdapter;
 import android.widget.TextView;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
-import java.io.StringReader;
-import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.LinkedList;
 import java.util.List;
 
-import javax.net.ssl.HttpsURLConnection;
-
-import static android.R.attr.data;
-import static android.R.id.list;
-
 public class RestConnectActivity extends AppCompatActivity {
 
-    private String FILENAME = "saved_addresses.cache";
+    private final String FILENAME = "saved_addresses.cache";
     private List<String> cachedAddresses;
+    public static int state;
+
+    public static final int STATE_OK = 0;
+    public static final int STATE_PROBLEM = 1;
+    public static final int STATE_IN_PROGRESS = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,6 +63,7 @@ public class RestConnectActivity extends AppCompatActivity {
         if (cs != null) {
             final String uri = cs.toString();
             if (!uri.trim().isEmpty()) {
+                state = STATE_IN_PROGRESS;
                 AsyncTask.execute(new Runnable() {
                     @Override
                     public void run() {
@@ -75,16 +71,28 @@ public class RestConnectActivity extends AppCompatActivity {
                             HttpURLConnection myConnection = createConnection(uri);
                             if (myConnection != null) {
                                 saveAddress(uri);
+                                state = STATE_OK;
                                 startMainActivity(getJson(myConnection), uri);
+                            } else {
+                                state = STATE_PROBLEM;
                             }
                         } catch (Exception e) {
+                            state = STATE_PROBLEM;
                             Log.e("REST", "Cant connect to address: " + uri);
                         }
                     }
                 });
+                while (state == STATE_IN_PROGRESS) {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                    }
+                }
+                if (state == STATE_PROBLEM)
+                    showAlertDialog("Unable to connect", "Please make sure the address provided is correct and that your connections on phone and raspberry are ok");
             }
         } else {
-            //TODO information to fill out uri
+            showAlertDialog("Empty address", "Please fill out the address");
         }
     }
 
@@ -176,32 +184,55 @@ public class RestConnectActivity extends AppCompatActivity {
     public static void set(Room room, String uri) {
         final String url = uri;
         final Room Room = room;
+        state = STATE_IN_PROGRESS;
         AsyncTask.execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    if (MainActivity.mode == MainActivity.REST_MODE) {
-                        String endpoint = url.charAt(url.length() - 1) == '/' ? url : url + "/";
-                        URL address = new URL(endpoint + "rooms/set");
+                    String endpoint = url.charAt(url.length() - 1) == '/' ? url : url + "/";
+                    URL address = new URL(endpoint + "rooms/set");
 
-                        HttpURLConnection myConnection
-                                = (HttpURLConnection) address.openConnection();
-                        myConnection.setRequestMethod("POST");
-                        myConnection.setDoOutput(true);
-                        myConnection.setDoInput(true);
-                        DataOutputStream printout;
-                        printout = new DataOutputStream(myConnection.getOutputStream());
-                        printout.writeBytes(URLEncoder.encode(Room.toJson().toString(), "UTF-8"));
-                        printout.flush();
-                        printout.close();
+                    HttpURLConnection myConnection
+                            = (HttpURLConnection) address.openConnection();
+                    myConnection.setRequestMethod("POST");
+                    myConnection.setDoOutput(true);
+                    myConnection.setDoInput(true);
+                    DataOutputStream printout;
+                    printout = new DataOutputStream(myConnection.getOutputStream());
+                    printout.writeBytes(URLEncoder.encode(Room.toJson().toString(), "UTF-8"));
+                    printout.flush();
+                    printout.close();
 
-                        Log.e("NET", "" + myConnection.getResponseCode());
-                        Log.e("NET", myConnection.getResponseMessage());
+                    if (myConnection.getResponseCode() != 200) {
+                        state = STATE_PROBLEM;
+                        Log.i("REST", "" + myConnection.getResponseCode());
+                        Log.i("REST", myConnection.getResponseMessage());
+
                     }
+                    state = STATE_OK;
                 } catch (Exception e) {
-                    Log.e("REST", "Can't send request");
+                    state = STATE_PROBLEM;
+                    Log.e("REST", "Can't send request " + e.getMessage());
                 }
             }
         });
     }
+
+    private void showAlertDialog(String title, String message) {
+        AlertDialog.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            builder = new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert);
+        } else {
+            builder = new AlertDialog.Builder(this);
+        }
+        builder.setTitle(title)
+                .setMessage(message)
+                .setPositiveButton("Got it", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                    }
+                })
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .show();
+    }
+
 }

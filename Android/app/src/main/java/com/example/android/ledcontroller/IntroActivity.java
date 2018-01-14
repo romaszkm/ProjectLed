@@ -1,10 +1,8 @@
 package com.example.android.ledcontroller;
 
-import android.app.Activity;
-import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 
 public class IntroActivity extends AppCompatActivity {

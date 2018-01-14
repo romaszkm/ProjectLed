@@ -1,11 +1,15 @@
 package com.example.android.ledcontroller;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -91,8 +95,18 @@ public class ColorActivity extends AppCompatActivity {
         final Room room = new Room(getIntent().getStringExtra("name"), bar_R.getProgress(), bar_G.getProgress(), bar_B.getProgress(), effect);
         if (MainActivity.mode == MainActivity.REST_MODE) {
             RestConnectActivity.set(room, getIntent().getStringExtra("URI"));
+            while (RestConnectActivity.state == RestConnectActivity.STATE_IN_PROGRESS) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                }
+            }
+            if (RestConnectActivity.state == RestConnectActivity.STATE_PROBLEM)
+                showAlertDialog("Internet connection", "Unable to send request. Check your raspberrypi and internet connection");
         } else {
-            BTConnectActivity.set(room);
+            if (!BTConnectActivity.set(room)) {
+                showAlertDialog("Bluetooth connection", "Unable to send request. Check your raspberrypi and bluetooth connection");
+            }
         }
     }
 
@@ -120,5 +134,29 @@ public class ColorActivity extends AppCompatActivity {
         } else {
             effect = null;
         }
+    }
+
+    public void showAlertDialog(String title, String message) {
+        AlertDialog.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            builder = new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert);
+        } else {
+            builder = new AlertDialog.Builder(this);
+        }
+        builder.setTitle(title)
+                .setMessage(message)
+                .setPositiveButton("Got it", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                    }
+                })
+                .setNegativeButton("Go back to connection choice", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        Intent intent = new Intent(ColorActivity.this, IntroActivity.class);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                        startActivity(intent);
+                    }
+                })
+                .setIcon(android.R.drawable.ic_dialog_alert);
+        builder.show();
     }
 }
