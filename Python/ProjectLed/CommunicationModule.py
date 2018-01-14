@@ -10,7 +10,7 @@ class CommunicationModule:
         self.main_controller = main_controller
         self.rest_module = RestModule(self)
 	self.bt_module = BTModule(self)
-        self.rest_module = None
+        #self.rest_module = None
 	#self.bt_module = None
     
     def run(self):
@@ -46,13 +46,8 @@ class RestModule(threading.Thread):
         @app.route('/rooms/get')
         def get():
             response = toJson(self.father_controller.get())
+            print(response)
             return response, 200
-
-        def toJson(rooms):
-            array = []
-            for room in rooms:
-                array.append(rooms[room].to_dict())
-            return json.dumps({'rooms':array})
 
         app.run(port=2525, host='0.0.0.0', debug=False, use_reloader=False)
 
@@ -66,8 +61,7 @@ class BTModule(threading.Thread):
         server_sock.bind(("", PORT_ANY))
         server_sock.listen(1)
         port = server_sock.getsockname()[1]
-
-        id = str(uuid.uuid1())
+        id = 'f4eee4c3-8d72-479d-b6ec-41e960ad0967'
         advertise_service(server_sock, 'LedControlServer',
                 service_id = id,
                 service_classes = [id, SERIAL_PORT_CLASS],
@@ -77,13 +71,20 @@ class BTModule(threading.Thread):
             print('Waiting for connection')
             client_sock, client_info = server_sock.accept()
             print('Connection from ', client_info)
+            client_sock.send(toJson(self.father_controller.get()))
             try:
                 while True:
                     data = client_sock.recv(1024)
                     if len(data) == 0:
                         break
+                    self.father_controller.set(data)
                     print('received [%s]' % data)
             except IOError:
                 pass
             print('Disconnected')
 
+def toJson(rooms):
+    array = []
+    for room in rooms:
+        array.append(rooms[room].to_dict())
+    return json.dumps({'rooms':array})
