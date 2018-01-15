@@ -19,6 +19,7 @@ import android.widget.LinearLayout;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.Set;
 
 /**
@@ -27,6 +28,7 @@ import java.util.Set;
 
 public class BTConnectActivity extends AppCompatActivity {
 
+    private final static int RESPONSE_TIMEOUT = 1000;
     private final static int REQUEST_ENABLE_BT = 1;
     private final static String UUID = "f4eee4c3-8d72-479d-b6ec-41e960ad0967";
     private static BluetoothSocket socket;
@@ -153,14 +155,28 @@ public class BTConnectActivity extends AppCompatActivity {
         try {
             OutputStream os = socket.getOutputStream();
             os.write(room.toJson().toString().getBytes());
+
+
+            String result = null;
+            for (int i = 100; i < RESPONSE_TIMEOUT; i+= 100) {
+                result = getRooms();
+                if (result != null) {
+                    break;
+                } else {
+                    Thread.sleep(100);
+                }
+            }
+            if (result == null || !result.trim().equals("200")) {
+                return false;
+            }
             return true;
-        } catch (IOException e) {
+        } catch (Exception e) {
             Log.e("BT", "Error occurred when sending data", e);
             return false;
         }
     }
 
-    private String getRooms() {
+    private static String getRooms() {
         try {
             InputStream is = socket.getInputStream();
             byte[] buffer = new byte[1024];

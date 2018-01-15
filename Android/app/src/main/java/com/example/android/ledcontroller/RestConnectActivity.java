@@ -208,8 +208,9 @@ public class RestConnectActivity extends AppCompatActivity {
                         Log.i("REST", "" + myConnection.getResponseCode());
                         Log.i("REST", myConnection.getResponseMessage());
 
+                    } else {
+                        state = STATE_OK;
                     }
-                    state = STATE_OK;
                 } catch (Exception e) {
                     state = STATE_PROBLEM;
                     Log.e("REST", "Can't send request " + e.getMessage());

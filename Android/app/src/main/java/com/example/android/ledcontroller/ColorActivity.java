@@ -95,19 +95,33 @@ public class ColorActivity extends AppCompatActivity {
         final Room room = new Room(getIntent().getStringExtra("name"), bar_R.getProgress(), bar_G.getProgress(), bar_B.getProgress(), effect);
         if (MainActivity.mode == MainActivity.REST_MODE) {
             RestConnectActivity.set(room, getIntent().getStringExtra("URI"));
+            if (!isSuccess()) {
+                showAlertDialog("Internet connection", "Unable to send request. Check your raspberrypi and internet connection");
+            }
+        } else {
+            if (!BTConnectActivity.set(room) || !isSuccess()) {
+                showAlertDialog("Bluetooth connection", "Unable to send request. Check your raspberrypi and bluetooth connection");
+            }
+        }
+    }
+
+    private boolean isSuccess() {
+        if (MainActivity.mode == MainActivity.REST_MODE) {
             while (RestConnectActivity.state == RestConnectActivity.STATE_IN_PROGRESS) {
                 try {
                     Thread.sleep(100);
                 } catch (InterruptedException e) {
                 }
+                if (RestConnectActivity.state == RestConnectActivity.STATE_PROBLEM) {
+                    return false;
+                } else {
+                    return true;
+                }
             }
-            if (RestConnectActivity.state == RestConnectActivity.STATE_PROBLEM)
-                showAlertDialog("Internet connection", "Unable to send request. Check your raspberrypi and internet connection");
         } else {
-            if (!BTConnectActivity.set(room)) {
-                showAlertDialog("Bluetooth connection", "Unable to send request. Check your raspberrypi and bluetooth connection");
-            }
+            return true;
         }
+        return false;
     }
 
     public void actionSwipeCheckBox(View v) {
