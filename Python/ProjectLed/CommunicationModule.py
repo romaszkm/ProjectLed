@@ -21,7 +21,7 @@ class CommunicationModule:
 
     def set(self, data):
         #TODO flagi dla blokowania jednoczesnych requestow albo ich kolejkowanie
-	self.main_controller.set_room(data)
+	return self.main_controller.set_room(data)
 
     def get(self):
         return self.main_controller.rooms
@@ -41,7 +41,7 @@ class RestModule(threading.Thread):
             if not data:
                 data = request.form.keys()[0]
             code = self.father_controller.set(data)
-            return 'Operation result {}'.format(code), code 
+            return 'OK', code 
             
         @app.route('/rooms/get')
         def get():
@@ -77,8 +77,9 @@ class BTModule(threading.Thread):
                     data = client_sock.recv(1024)
                     if len(data) == 0:
                         break
-                    self.father_controller.set(data)
-                    print('received [%s]' % data)
+                    code = self.father_controller.set(data)
+                    print('%s: received [%s]' % (str(code), data))
+                    client_sock.send(str(code))
             except IOError:
                 pass
             print('Disconnected')
