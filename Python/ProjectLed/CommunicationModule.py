@@ -20,7 +20,6 @@ class CommunicationModule:
 	    self.bt_module.start()
 
     def set(self, data):
-        #TODO flagi dla blokowania jednoczesnych requestow albo ich kolejkowanie
 	self.main_controller.set_room(data)
 
     def get(self):
