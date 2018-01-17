@@ -104,7 +104,7 @@ public class RestConnectActivity extends MyAbstractActivity {
                     startMainActivity(result, uri);
                 } else {
                     showAlertDialog(RestConnectActivity.this, "Connection failed",
-                            "Please make sure the address provided is correct and that your connections on phone and raspberry are ok");
+                            "Please make sure the address provided is correct and that your connections on phone and raspberry are correct");
                 }
                 super.onPostExecute(o);
             }

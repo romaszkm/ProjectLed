@@ -88,7 +88,8 @@ public class BTConnectActivity extends MyAbstractActivity {
                 closeSocket();
                 BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
                 if (!mBluetoothAdapter.isEnabled()) {
-                    showAlertDialog(BTConnectActivity.this, "Bluetooth error", "Please re-enable bluetooth");
+                    showAlertDialog(BTConnectActivity.this, "Bluetooth error",
+                            "Please re-enable bluetooth");
                     return;
                 }
                 showConnectDialog(BTConnectActivity.this);
