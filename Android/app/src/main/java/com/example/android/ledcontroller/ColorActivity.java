@@ -1,5 +1,6 @@
 package com.example.android.ledcontroller;
 
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
@@ -8,14 +9,12 @@ import android.graphics.PorterDuffColorFilter;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.SeekBar;
 
-public class ColorActivity extends AppCompatActivity {
+public class ColorActivity extends MyAbstractActivity {
 
     private final static String EFFECT_SWIPE = "swipe";
     private final static String EFFECT_BREATHING = "breathing";
@@ -26,6 +25,7 @@ public class ColorActivity extends AppCompatActivity {
     private SeekBar bar_B;
     private CheckBox swipe;
     private CheckBox breathing;
+    public Button buttonSend;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,6 +50,7 @@ public class ColorActivity extends AppCompatActivity {
         bar_B = (SeekBar) findViewById(R.id.valueB);
         swipe = (CheckBox) findViewById(R.id.effectSwipe);
         breathing = (CheckBox) findViewById(R.id.effectBreathing);
+        buttonSend = (Button) findViewById(R.id.buttonSet);
 
         bar_R.setProgress(r);
         bar_G.setProgress(g);
@@ -92,36 +93,17 @@ public class ColorActivity extends AppCompatActivity {
     }
 
     public void set(View v) {
+        setButtonSendEnabled(false);
         final Room room = new Room(getIntent().getStringExtra("name"), bar_R.getProgress(), bar_G.getProgress(), bar_B.getProgress(), effect);
         if (MainActivity.mode == MainActivity.REST_MODE) {
-            RestConnectActivity.set(room, getIntent().getStringExtra("URI"));
-            if (!isSuccess()) {
-                showAlertDialog("Internet connection", "Unable to send request. Check your raspberrypi and internet connection");
-            }
+            RestConnectActivity.set(room, getIntent().getStringExtra("URI"), this);
         } else {
-            if (!BTConnectActivity.set(room) || !isSuccess()) {
-                showAlertDialog("Bluetooth connection", "Unable to send request. Check your raspberrypi and bluetooth connection");
-            }
+            BTConnectActivity.set(room, this);
         }
     }
 
-    private boolean isSuccess() {
-        if (MainActivity.mode == MainActivity.REST_MODE) {
-            while (RestConnectActivity.state == RestConnectActivity.STATE_IN_PROGRESS) {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                }
-                if (RestConnectActivity.state == RestConnectActivity.STATE_PROBLEM) {
-                    return false;
-                } else {
-                    return true;
-                }
-            }
-        } else {
-            return true;
-        }
-        return false;
+    public void setButtonSendEnabled(boolean enabled) {
+        buttonSend.setEnabled(enabled);
     }
 
     public void actionSwipeCheckBox(View v) {
@@ -150,7 +132,8 @@ public class ColorActivity extends AppCompatActivity {
         }
     }
 
-    public void showAlertDialog(String title, String message) {
+    @Override
+    public void showAlertDialog(Context context, String title, String message) {
         AlertDialog.Builder builder;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             builder = new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert);

@@ -1,38 +1,35 @@
 package com.example.android.ledcontroller;
 
-import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.util.Set;
 
 /**
  * Created by michalromaszko on 14.01.2018.
  */
 
-public class BTConnectActivity extends AppCompatActivity {
+public class BTConnectActivity extends MyAbstractActivity {
 
     private final static int RESPONSE_TIMEOUT = 1000;
     private final static int REQUEST_ENABLE_BT = 1;
     private final static String UUID = "f4eee4c3-8d72-479d-b6ec-41e960ad0967";
     private static BluetoothSocket socket;
-    private ProgressDialog dialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,7 +41,8 @@ public class BTConnectActivity extends AppCompatActivity {
     private void enableBT() {
         BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBluetoothAdapter == null) {
-            showAlertDialog("Bluetooth not available", "This device does not support bluetooth. Maybe choose internet connection?");
+            showAlertDialog(this, "Bluetooth not available",
+                    "This device does not support bluetooth. Maybe choose internet connection?");
         } else {
             if (!mBluetoothAdapter.isEnabled()) {
                 Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
@@ -74,47 +72,24 @@ public class BTConnectActivity extends AppCompatActivity {
             Button b = new Button(this);
             b.setText(device.getName());
             b.setOnClickListener(listener);
-            b.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+            b.setLayoutParams(new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT));
             layout.addView(b);
         }
-    }
-
-    private void showConnectDialog() {
-        dialog = new ProgressDialog(this);
-        dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-        dialog.setMessage("Connecting...");
-        dialog.setIndeterminate(true);
-        dialog.setCanceledOnTouchOutside(false);
-        dialog.show();
-    }
-
-    private void showAlertDialog(String title, String message) {
-        AlertDialog.Builder builder;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            builder = new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert);
-        } else {
-            builder = new AlertDialog.Builder(this);
-        }
-        builder.setTitle(title)
-                .setMessage(message)
-                .setPositiveButton("Got it", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                    }
-                })
-                .setIcon(android.R.drawable.ic_dialog_alert)
-                .show();
     }
 
     private View.OnClickListener getChoiceListener(final Set<BluetoothDevice> pairedDevices) {
         return new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                closeSocket();
                 BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
                 if (!mBluetoothAdapter.isEnabled()) {
-                    showAlertDialog("Bluetooth error", "Please re-enable bluetooth");
+                    showAlertDialog(BTConnectActivity.this, "Bluetooth error", "Please re-enable bluetooth");
                     return;
                 }
-                showConnectDialog();
+                showConnectDialog(BTConnectActivity.this);
                 final View view = v;
                 AsyncTask task = new AsyncTask() {
                     @Override
@@ -122,12 +97,21 @@ public class BTConnectActivity extends AppCompatActivity {
                         for (BluetoothDevice device : pairedDevices) {
                             if (device.getName().equals(params[0])) {
                                 if (setSocket(device)) {
-                                    dialog.dismiss();
-                                    String rooms = getRooms();
+                                    String rooms = null;
+                                    for (int i = 100; i < RESPONSE_TIMEOUT; i += 100) {
+                                        rooms = getRooms();
+                                        if (rooms != null) {
+                                            break;
+                                        } else {
+                                            try {
+                                                Thread.sleep(100);
+                                            } catch (Exception e) {
+                                            }
+                                        }
+                                    }
                                     if (rooms != null)
                                         return rooms;
                                 } else {
-                                    dialog.dismiss();
                                     return null;
                                 }
                             }
@@ -137,11 +121,13 @@ public class BTConnectActivity extends AppCompatActivity {
 
                     @Override
                     protected void onPostExecute(Object o) {
-                        String result = (String) o;
-                        if (result != null) {
+                        dialog.dismiss();
+                        if (o != null) {
+                            String result = (String) o;
                             startMainActivity(result);
                         } else {
-                            showAlertDialog("Connection failed", "Make sure you have chosen right device and that its bluetooth is turned on");
+                            showAlertDialog(BTConnectActivity.this, "Connection failed",
+                                    "Make sure you have chosen right device and that its bluetooth is turned on");
                         }
                         super.onPostExecute(o);
                     }
@@ -151,38 +137,108 @@ public class BTConnectActivity extends AppCompatActivity {
         };
     }
 
-    public static Boolean set(Room room) {
-        try {
-            OutputStream os = socket.getOutputStream();
-            os.write(room.toJson().toString().getBytes());
+    public static void set(final Room room, ColorActivity c) {
+        AsyncTask task = new AsyncTask() {
 
-
-            String result = null;
-            for (int i = 100; i < RESPONSE_TIMEOUT; i+= 100) {
-                result = getRooms();
-                if (result != null) {
-                    break;
-                } else {
-                    Thread.sleep(100);
+            @Override
+            protected void onCancelled() {
+                try {
+                    socket.close();
+                } catch (IOException e) {
                 }
             }
-            if (result == null || !result.trim().equals("200")) {
-                return false;
+
+            @Override
+            protected Object doInBackground(Object[] params) {
+                try {
+                    OutputStream os = socket.getOutputStream();
+                    os.write(room.toJson().toString().getBytes());
+                    String result = null;
+                    for (int i = 100; i < RESPONSE_TIMEOUT; i += 100) {
+                        result = getRooms();
+                        if (result != null) {
+                            break;
+                        } else {
+                            Thread.sleep(100);
+                        }
+                    }
+                    if (result == null || !result.trim().equals("200")) {
+                        return new Object[]{false, params[0]};
+                    }
+                    return new Object[]{true, params[0]};
+                } catch (Exception e) {
+                    Log.e("BT", "Error occurred when sending data", e);
+                    return new Object[]{false, params[0]};
+                }
+//                try {
+//                    if (myConnection.getResponseCode() == 200) {
+//                        myConnection.disconnect();
+//                        return new Object[]{true, params[0]};
+//                    } else {
+//                        myConnection.disconnect();
+//                        Log.i("REST", String.valueOf(myConnection.getResponseCode()));
+//                        return new Object[]{false, params[0]};
+//                    }
+//                } catch (Exception e) {
+//                    myConnection.disconnect();
+//                    Log.e("REST", "Can't send request " + e.getMessage());
+//                    return new Object[]{false, params[0]};
+//                }
             }
-            return true;
-        } catch (Exception e) {
-            Log.e("BT", "Error occurred when sending data", e);
-            return false;
-        }
+
+            @Override
+            protected void onPostExecute(Object o) {
+                Object[] ob = (Object[]) o;
+                boolean result = (boolean) ob[0];
+                ColorActivity c = (ColorActivity) ob[1];
+                c.setButtonSendEnabled(true);
+                if (!result) {
+                    c.showAlertDialog(c, "Bluetooth connection",
+                        "Unable to send request. Check your raspberrypi and bluetooth connection");
+                }
+                super.onPostExecute(o);
+            }
+        };
+        task.execute(c);
+
+
+
+
+
+
+
+//        try {
+//            OutputStream os = socket.getOutputStream();
+//            os.write(room.toJson().toString().getBytes());
+//            String result = null;
+//            for (int i = 100; i < RESPONSE_TIMEOUT; i += 100) {
+//                result = getRooms();
+//                if (result != null) {
+//                    break;
+//                } else {
+//                    Thread.sleep(100);
+//                }
+//            }
+//            if (result == null || !result.trim().equals("200")) {
+//                return false;
+//            }
+//            return true;
+//        } catch (Exception e) {
+//            Log.e("BT", "Error occurred when sending data", e);
+//            return false;
+//        }
     }
 
     private static String getRooms() {
         try {
             InputStream is = socket.getInputStream();
             byte[] buffer = new byte[1024];
-            is.read(buffer);
-            String s = new String(buffer, "UTF-8");
-            return s;
+            if (is.available() != 0) {
+                is.read(buffer);
+                String s = new String(buffer, "UTF-8");
+                return s;
+            }
+            return null;
         } catch (Exception e) {
             Log.e("BT", "Error occurred when receiving data", e);
         }
@@ -221,9 +277,10 @@ public class BTConnectActivity extends AppCompatActivity {
 
     public static void closeSocket() {
         try {
-            socket.close();
+            if (socket != null) {
+                socket.close();
+            }
         } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 

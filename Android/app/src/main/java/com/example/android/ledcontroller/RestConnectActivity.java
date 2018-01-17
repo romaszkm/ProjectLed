@@ -1,13 +1,10 @@
 package com.example.android.ledcontroller;
 
+import android.bluetooth.BluetoothDevice;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -25,16 +22,19 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.Executors;
 
-public class RestConnectActivity extends AppCompatActivity {
+public class RestConnectActivity extends MyAbstractActivity {
 
-    private final String FILENAME = "saved_addresses.cache";
+    private static final String FILENAME = "saved_addresses.cache";
     private List<String> cachedAddresses;
     public static int state;
 
     public static final int STATE_OK = 0;
     public static final int STATE_PROBLEM = 1;
     public static final int STATE_IN_PROGRESS = 2;
+    public final static int RESPONSE_TIMEOUT = 2000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,40 +63,89 @@ public class RestConnectActivity extends AppCompatActivity {
         if (cs != null) {
             final String uri = cs.toString();
             if (!uri.trim().isEmpty()) {
-                state = STATE_IN_PROGRESS;
-                AsyncTask.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            HttpURLConnection myConnection = createConnection(uri);
-                            if (myConnection != null) {
-                                saveAddress(uri);
-                                state = STATE_OK;
-                                startMainActivity(getJson(myConnection), uri);
-                            } else {
-                                state = STATE_PROBLEM;
-                            }
-                        } catch (Exception e) {
-                            state = STATE_PROBLEM;
-                            Log.e("REST", "Cant connect to address: " + uri);
-                        }
-                    }
-                });
-                while (state == STATE_IN_PROGRESS) {
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                    }
-                }
-                if (state == STATE_PROBLEM)
-                    showAlertDialog("Unable to connect", "Please make sure the address provided is correct and that your connections on phone and raspberry are ok");
+                getRooms(uri);
             }
         } else {
-            showAlertDialog("Empty address", "Please fill out the address");
+            showAlertDialog(this, "Empty address", "Please fill out the address");
         }
     }
 
-    private String getJson(HttpURLConnection connection) throws Exception {
+    private void getRooms(final String uri) {
+        showConnectDialog(this);
+        AsyncTask task = new AsyncTask() {
+            HttpURLConnection myConnection;
+
+            @Override
+            protected void onCancelled() {
+                myConnection.disconnect();
+            }
+
+            @Override
+            protected Object doInBackground(Object[] params) {
+                try {
+                    myConnection = createConnection(uri);
+                    if (myConnection != null) {
+                        saveAddress(uri);
+                        return getJsonFromResponse(myConnection);
+                    } else {
+                        return null;
+                    }
+                } catch (Exception e) {
+                    Log.e("REST", "Cant connect to address: " + uri);
+                    return null;
+                }
+            }
+
+            @Override
+            protected void onPostExecute(Object o) {
+                dialog.dismiss();
+                if (o != null) {
+                    String result = (String) o;
+                    startMainActivity(result, uri);
+                } else {
+                    showAlertDialog(RestConnectActivity.this, "Connection failed",
+                            "Please make sure the address provided is correct and that your connections on phone and raspberry are ok");
+                }
+                super.onPostExecute(o);
+            }
+        };
+        task.execute();
+//        AsyncTask.execute(new Runnable() {
+//            @Override
+//            public void run() {
+//                try {
+//                    HttpURLConnection myConnection = createConnection(uri);
+//                    if (myConnection != null) {
+//                        saveAddress(uri);
+//                        state = STATE_OK;
+//                        startMainActivity(getJsonFromResponse(myConnection), uri);
+//                    } else {
+//                        state = STATE_PROBLEM;
+//                    }
+//                } catch (Exception e) {
+//                    state = STATE_PROBLEM;
+//                    Log.e("REST", "Cant connect to address: " + uri);
+//                }
+//            }
+//        });
+//        for (int i = 100; i < RESPONSE_TIMEOUT; i += 100) {
+//            if (state == STATE_IN_PROGRESS) {
+//                try {
+//                    Thread.sleep(100);
+//                } catch (InterruptedException e) {
+//                }
+//            } else {
+//                break;
+//            }
+//        }
+//        dialog.dismiss();
+//        if (state == STATE_PROBLEM)
+//            showAlertDialog(this, "Unable to connect", "Please make sure the address provided is correct and that your connections on phone and raspberry are ok");
+//        if (state == STATE_IN_PROGRESS)
+//            showAlertDialog(this, "Unable to connect", "Server took to long to respond");
+    }
+
+    private String getJsonFromResponse(HttpURLConnection connection) throws Exception {
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
         StringBuilder stringBuilder = new StringBuilder();
         String line;
@@ -112,6 +161,8 @@ public class RestConnectActivity extends AppCompatActivity {
         URL address = new URL(endpoint);
         HttpURLConnection myConnection =
                 (HttpURLConnection) address.openConnection();
+        myConnection.setReadTimeout(RESPONSE_TIMEOUT);
+        myConnection.setConnectTimeout(RESPONSE_TIMEOUT);
         if (myConnection.getResponseCode() == 200) {
             myConnection.disconnect();
             return myConnection;
@@ -181,59 +232,62 @@ public class RestConnectActivity extends AppCompatActivity {
         }
     }
 
-    public static void set(Room room, String uri) {
-        final String url = uri;
-        final Room Room = room;
-        state = STATE_IN_PROGRESS;
-        AsyncTask.execute(new Runnable() {
+    public static void set(final Room room, final String uri, ColorActivity c) {
+        AsyncTask task = new AsyncTask() {
+            HttpURLConnection myConnection;
+
             @Override
-            public void run() {
+            protected void onCancelled() {
+                myConnection.disconnect();
+            }
+
+            @Override
+            protected Object doInBackground(Object[] params) {
+                myConnection = null;
                 try {
-                    String endpoint = url.charAt(url.length() - 1) == '/' ? url : url + "/";
+                    String endpoint = uri.charAt(uri.length() - 1) == '/' ? uri : uri + "/";
                     URL address = new URL(endpoint + "rooms/set");
 
-                    HttpURLConnection myConnection
-                            = (HttpURLConnection) address.openConnection();
+                    myConnection = (HttpURLConnection) address.openConnection();
+                    myConnection.setReadTimeout(RESPONSE_TIMEOUT);
+                    myConnection.setConnectTimeout(RESPONSE_TIMEOUT);
                     myConnection.setRequestMethod("POST");
                     myConnection.setDoOutput(true);
                     myConnection.setDoInput(true);
                     DataOutputStream printout;
                     printout = new DataOutputStream(myConnection.getOutputStream());
-                    printout.writeBytes(URLEncoder.encode(Room.toJson().toString(), "UTF-8"));
+                    printout.writeBytes(URLEncoder.encode(room.toJson().toString(), "UTF-8"));
                     printout.flush();
                     printout.close();
-
-                    if (myConnection.getResponseCode() != 200) {
-                        state = STATE_PROBLEM;
-                        Log.i("REST", "" + myConnection.getResponseCode());
-                        Log.i("REST", myConnection.getResponseMessage());
-
+                    if (myConnection.getResponseCode() == 200) {
+                        myConnection.disconnect();
+                        return new Object[]{true, params[0]};
                     } else {
-                        state = STATE_OK;
+                        myConnection.disconnect();
+                        Log.i("REST", String.valueOf(myConnection.getResponseCode()));
+                        return new Object[]{false, params[0]};
                     }
                 } catch (Exception e) {
-                    state = STATE_PROBLEM;
+                    myConnection.disconnect();
                     Log.e("REST", "Can't send request " + e.getMessage());
+                    return new Object[]{false, params[0]};
                 }
             }
-        });
-    }
 
-    private void showAlertDialog(String title, String message) {
-        AlertDialog.Builder builder;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            builder = new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert);
-        } else {
-            builder = new AlertDialog.Builder(this);
-        }
-        builder.setTitle(title)
-                .setMessage(message)
-                .setPositiveButton("Got it", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                    }
-                })
-                .setIcon(android.R.drawable.ic_dialog_alert)
-                .show();
+            @Override
+            protected void onPostExecute(Object o) {
+                Object[] ob = (Object[]) o;
+                boolean result = (boolean) ob[0];
+                ColorActivity c = (ColorActivity) ob[1];
+                c.setButtonSendEnabled(true);
+                if (!result) {
+                    c.showAlertDialog(c, "Internet connection",
+                        "Unable to send request. Check your raspberrypi and internet connection");
+                }
+                super.onPostExecute(o);
+            }
+        };
+        task.execute(c);
     }
 
 }
