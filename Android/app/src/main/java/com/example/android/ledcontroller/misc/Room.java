@@ -1,8 +1,5 @@
-package com.example.android.ledcontroller;
+package com.example.android.ledcontroller.misc;
 
-import android.util.JsonWriter;
-
-import org.json.JSONException;
 import org.json.JSONObject;
 
 /**

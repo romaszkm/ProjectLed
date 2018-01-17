@@ -20,10 +20,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".RestConnectActivity" />
-        <activity android:name=".MainActivity" />
-        <activity android:name=".BTConnectActivity"/>
-        <activity android:name=".ColorActivity"></activity>
+        <activity android:name=".connection.RestConnectActivity" />
+        <activity android:name=".ChoiceActivity" />
+        <activity android:name=".connection.BTConnectActivity"/>
+        <activity android:name=".ColorActivity"/>
     </application>
 
 </manifest>

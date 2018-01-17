@@ -1,4 +1,4 @@
-package com.example.android.ledcontroller;
+package com.example.android.ledcontroller.misc;
 
 import android.app.ProgressDialog;
 import android.content.Context;

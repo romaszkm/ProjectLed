@@ -5,6 +5,9 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 
+import com.example.android.ledcontroller.connection.BTConnectActivity;
+import com.example.android.ledcontroller.connection.RestConnectActivity;
+
 public class IntroActivity extends AppCompatActivity {
 
     @Override

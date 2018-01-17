@@ -1,4 +1,4 @@
-package com.example.android.ledcontroller;
+package com.example.android.ledcontroller.connection;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -11,13 +11,15 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 
-import java.io.DataOutputStream;
+import com.example.android.ledcontroller.ChoiceActivity;
+import com.example.android.ledcontroller.ColorActivity;
+import com.example.android.ledcontroller.misc.MyAbstractActivity;
+import com.example.android.ledcontroller.R;
+import com.example.android.ledcontroller.misc.Room;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
 import java.util.Set;
 
 /**
@@ -170,20 +172,6 @@ public class BTConnectActivity extends MyAbstractActivity {
                     Log.e("BT", "Error occurred when sending data", e);
                     return new Object[]{false, params[0]};
                 }
-//                try {
-//                    if (myConnection.getResponseCode() == 200) {
-//                        myConnection.disconnect();
-//                        return new Object[]{true, params[0]};
-//                    } else {
-//                        myConnection.disconnect();
-//                        Log.i("REST", String.valueOf(myConnection.getResponseCode()));
-//                        return new Object[]{false, params[0]};
-//                    }
-//                } catch (Exception e) {
-//                    myConnection.disconnect();
-//                    Log.e("REST", "Can't send request " + e.getMessage());
-//                    return new Object[]{false, params[0]};
-//                }
             }
 
             @Override
@@ -200,33 +188,6 @@ public class BTConnectActivity extends MyAbstractActivity {
             }
         };
         task.execute(c);
-
-
-
-
-
-
-
-//        try {
-//            OutputStream os = socket.getOutputStream();
-//            os.write(room.toJson().toString().getBytes());
-//            String result = null;
-//            for (int i = 100; i < RESPONSE_TIMEOUT; i += 100) {
-//                result = getRooms();
-//                if (result != null) {
-//                    break;
-//                } else {
-//                    Thread.sleep(100);
-//                }
-//            }
-//            if (result == null || !result.trim().equals("200")) {
-//                return false;
-//            }
-//            return true;
-//        } catch (Exception e) {
-//            Log.e("BT", "Error occurred when sending data", e);
-//            return false;
-//        }
     }
 
     private static String getRooms() {
@@ -247,8 +208,8 @@ public class BTConnectActivity extends MyAbstractActivity {
 
 
     private void startMainActivity(String json) {
-        Intent intent = new Intent(this, MainActivity.class);
-        MainActivity.mode = MainActivity.BT_MODE;
+        Intent intent = new Intent(this, ChoiceActivity.class);
+        ChoiceActivity.mode = ChoiceActivity.BT_MODE;
         intent.putExtra("JSON", json);
         startActivity(intent);
     }

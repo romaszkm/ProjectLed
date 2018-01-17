@@ -7,10 +7,13 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
+import com.example.android.ledcontroller.connection.BTConnectActivity;
+import com.example.android.ledcontroller.misc.Room;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-public class MainActivity extends AppCompatActivity {
+public class ChoiceActivity extends AppCompatActivity {
     public static int REST_MODE = 0;
     public static int BT_MODE = 1;
     public static int mode;
@@ -21,7 +24,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_choice);
         getJsonData();
         setButtons();
     }

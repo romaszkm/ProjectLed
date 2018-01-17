@@ -1,6 +1,5 @@
-package com.example.android.ledcontroller;
+package com.example.android.ledcontroller.connection;
 
-import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
@@ -12,6 +11,12 @@ import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import com.example.android.ledcontroller.ChoiceActivity;
+import com.example.android.ledcontroller.ColorActivity;
+import com.example.android.ledcontroller.misc.MyAbstractActivity;
+import com.example.android.ledcontroller.R;
+import com.example.android.ledcontroller.misc.Room;
+
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.FileInputStream;
@@ -22,18 +27,13 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.Executors;
 
 public class RestConnectActivity extends MyAbstractActivity {
 
+    //Cache
     private static final String FILENAME = "saved_addresses.cache";
     private List<String> cachedAddresses;
-    public static int state;
 
-    public static final int STATE_OK = 0;
-    public static final int STATE_PROBLEM = 1;
-    public static final int STATE_IN_PROGRESS = 2;
     public final static int RESPONSE_TIMEOUT = 2000;
 
     @Override
@@ -110,39 +110,6 @@ public class RestConnectActivity extends MyAbstractActivity {
             }
         };
         task.execute();
-//        AsyncTask.execute(new Runnable() {
-//            @Override
-//            public void run() {
-//                try {
-//                    HttpURLConnection myConnection = createConnection(uri);
-//                    if (myConnection != null) {
-//                        saveAddress(uri);
-//                        state = STATE_OK;
-//                        startMainActivity(getJsonFromResponse(myConnection), uri);
-//                    } else {
-//                        state = STATE_PROBLEM;
-//                    }
-//                } catch (Exception e) {
-//                    state = STATE_PROBLEM;
-//                    Log.e("REST", "Cant connect to address: " + uri);
-//                }
-//            }
-//        });
-//        for (int i = 100; i < RESPONSE_TIMEOUT; i += 100) {
-//            if (state == STATE_IN_PROGRESS) {
-//                try {
-//                    Thread.sleep(100);
-//                } catch (InterruptedException e) {
-//                }
-//            } else {
-//                break;
-//            }
-//        }
-//        dialog.dismiss();
-//        if (state == STATE_PROBLEM)
-//            showAlertDialog(this, "Unable to connect", "Please make sure the address provided is correct and that your connections on phone and raspberry are ok");
-//        if (state == STATE_IN_PROGRESS)
-//            showAlertDialog(this, "Unable to connect", "Server took to long to respond");
     }
 
     private String getJsonFromResponse(HttpURLConnection connection) throws Exception {
@@ -173,8 +140,8 @@ public class RestConnectActivity extends MyAbstractActivity {
     }
 
     private void startMainActivity(String jsonString, String uri) {
-        Intent intent = new Intent(this, MainActivity.class);
-        MainActivity.mode = MainActivity.REST_MODE;
+        Intent intent = new Intent(this, ChoiceActivity.class);
+        ChoiceActivity.mode = ChoiceActivity.REST_MODE;
         intent.putExtra("JSON", jsonString);
         intent.putExtra("URI", uri);
         startActivity(intent);

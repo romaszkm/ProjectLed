@@ -14,6 +14,11 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.SeekBar;
 
+import com.example.android.ledcontroller.connection.BTConnectActivity;
+import com.example.android.ledcontroller.connection.RestConnectActivity;
+import com.example.android.ledcontroller.misc.MyAbstractActivity;
+import com.example.android.ledcontroller.misc.Room;
+
 public class ColorActivity extends MyAbstractActivity {
 
     private final static String EFFECT_SWIPE = "swipe";
@@ -95,7 +100,7 @@ public class ColorActivity extends MyAbstractActivity {
     public void set(View v) {
         setButtonSendEnabled(false);
         final Room room = new Room(getIntent().getStringExtra("name"), bar_R.getProgress(), bar_G.getProgress(), bar_B.getProgress(), effect);
-        if (MainActivity.mode == MainActivity.REST_MODE) {
+        if (ChoiceActivity.mode == ChoiceActivity.REST_MODE) {
             RestConnectActivity.set(room, getIntent().getStringExtra("URI"), this);
         } else {
             BTConnectActivity.set(room, this);
